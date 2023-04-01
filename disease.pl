@@ -43,15 +43,22 @@ symptom(Symptom) :-
     member(Symptom, Symptoms).
 
 
-patient_symptoms([cough, fever]).
+patient_symptoms([cough, fever, m_j_pain, nausea_vomit, runny_nose, dengue_rash]).
 
 have_symptom(Symptom) :-
     patient_symptoms(Symptoms),
     symptom(Symptom),
     member(Symptom,Symptoms).
 
+possible(Disease) :-
+    disease(Disease),
+    setof(Symptom, symptom_of(Disease, Symptom), Symptoms),
+    patient_symptoms(PatientSymptoms),
+    subset(PatientSymptoms,Symptoms).
 
-
+diagnose(Disease) :-
+    possible(Disease),
+    \+ ((possible(OtherDisease), OtherDisease \= Disease)), !.
 
 
 

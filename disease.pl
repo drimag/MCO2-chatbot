@@ -39,22 +39,41 @@ symptom_of(asthma, Symptom) :-
     member(Symptom,Symptoms).
 
 symptom(Symptom) :-
-    setof(S, D^(disease(D), symptom_of(D, S)), Symptoms),
+    setof(Symp, Disease^(disease(Disease), symptom_of(Disease, Symp)), Symptoms),
     member(Symptom, Symptoms).
 
 :- dynamic patient_symptoms/1.
-patient_symptoms([cough, fever, m_j_pain, nausea_vomit, runny_nose, dengue_rash]).
+patient_symptoms([]).
 
 have_symptom(Symptom) :-
     patient_symptoms(Symptoms),
     symptom(Symptom),
     member(Symptom,Symptoms).
 
+all_possible_symptoms(Symptoms) :-
+    possible_diseases(Diseases),
+    findall(DiseaseSymptoms, (member(Disease, Diseases), findall(Symptom, symptom_of(Disease, Symptom), DiseaseSymptoms)), AllSymptoms),
+    flatten(AllSymptoms, Symptoms1),
+    list_to_set(Symptoms1, Symptoms),
+    write(Symptoms).
+
+intersect_lists([], []).
+intersect_lists([L|Ls], Intersection) :-
+    foldl(intersection, Ls, L, Intersection).
+
+common_symptoms(Symptoms) :-
+    possible_diseases(Diseases),
+    findall(DiseaseSymptoms, (member(Disease, Diseases), findall(Symptom, symptom_of(Disease, Symptom), DiseaseSymptoms)), AllSymptoms),
+    intersect_lists(AllSymptoms,Symptoms).
+
 possible(Disease) :-
     disease(Disease),
     setof(Symptom, symptom_of(Disease, Symptom), Symptoms),
     patient_symptoms(PatientSymptoms),
     subset(PatientSymptoms,Symptoms).
+
+possible_diseases(Diseases) :-
+    setof(Disease, possible(Disease), Diseases).
 
 diagnose(Disease) :-
     possible(Disease),
@@ -71,8 +90,16 @@ interview_over() :-
     aggregate_all(count, possible(Disease), Count),
     Count == 1, !.
 
-interview(Symptom) :-
+ask(Symptom) :-
     format('do you have ~w? (y/n)~n', [Symptom]),
     read(Answer),
     Answer == y -> add_patient_symptom(Symptom).
 
+interview() :-
+    interview_over(),
+    possible_symptoms(PossibleSymptoms),
+    common_symptoms(CommonSymptoms),
+    subtract(PossibleSymptoms, CommonSymptoms, SymptomsOI),
+    nth0(0, SymptomsOI, SymptomOI),
+    ask(SymptomOI),
+    interview().

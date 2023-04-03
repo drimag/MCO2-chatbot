@@ -66,6 +66,11 @@ add_patient_symptom(Symptom) :-
     retract(patient_symptoms(Symptoms)),
     assertz(patient_symptoms(NewSymptoms)).
 
+interview_over() :-
+    disease(Disease),
+    aggregate_all(count, possible(Disease), Count),
+    Count == 1, !.
+
 interview(Symptom) :-
     format('do you have ~w? (y/n)~n', [Symptom]),
     read(Answer),

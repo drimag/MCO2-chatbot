@@ -42,7 +42,7 @@ symptom(Symptom) :-
     setof(S, D^(disease(D), symptom_of(D, S)), Symptoms),
     member(Symptom, Symptoms).
 
-
+:- dynamic patient_symptoms/1.
 patient_symptoms([cough, fever, m_j_pain, nausea_vomit, runny_nose, dengue_rash]).
 
 have_symptom(Symptom) :-
@@ -60,5 +60,14 @@ diagnose(Disease) :-
     possible(Disease),
     \+ ((possible(OtherDisease), OtherDisease \= Disease)), !.
 
+add_patient_symptom(Symptom) :-
+    patient_symptoms(Symptoms),
+    append(Symptoms, [Symptom], NewSymptoms),
+    retract(patient_symptoms(Symptoms)),
+    assertz(patient_symptoms(NewSymptoms)).
 
+interview(Symptom) :-
+    format('do you have ~w? (y/n)~n', [Symptom]),
+    read(Answer),
+    Answer == y -> add_patient_symptom(Symptom).
 

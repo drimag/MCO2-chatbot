@@ -1,3 +1,4 @@
+% declaring the diseases and symptoms 
 diseases([dengue, pneumonia, acs, tuberculosis, uti, hypertension, scabies, asthma]).
 
 disease(Disease) :-
@@ -41,15 +42,38 @@ symptom_of(asthma, Symptom) :-
 symptom(Symptom) :-
     setof(Symp, Disease^(disease(Disease), symptom_of(Disease, Symp)), Symptoms),
     member(Symptom, Symptoms).
+% 
+% end of declaring diseases and symptoms 
+% 
 
+% patient symptoms added to this list
 :- dynamic patient_symptoms/1.
 patient_symptoms([]).
 
+% hasnt really been used, but says that if a symptom is in patient symptoms then the patient has a symptom
 have_symptom(Symptom) :-
     patient_symptoms(Symptoms),
     symptom(Symptom),
     member(Symptom,Symptoms).
 
+% based on patient symptoms, declares which diseases are still possible ()
+possible(Disease) :-
+    disease(Disease),
+    setof(Symptom, symptom_of(Disease, Symptom), Symptoms),
+    patient_symptoms(PatientSymptoms),
+    subset(PatientSymptoms,Symptoms).
+
+% just puts the possible diseases into a list
+possible_diseases(Diseases) :-
+    setof(Disease, possible(Disease), Diseases).
+
+% based on possible diseases, returns the common symptoms
+common_symptoms(Symptoms) :-
+    possible_diseases(Diseases),
+    findall(DiseaseSymptoms, (member(Disease, Diseases), findall(Symptom, symptom_of(Disease, Symptom), DiseaseSymptoms)), AllSymptoms),
+    intersect_lists(AllSymptoms,Symptoms).
+
+% based on possible diseases, returns the possible symptoms 
 all_possible_symptoms(Symptoms) :-
     possible_diseases(Diseases),
     findall(DiseaseSymptoms, (member(Disease, Diseases), findall(Symptom, symptom_of(Disease, Symptom), DiseaseSymptoms)), AllSymptoms),
@@ -57,44 +81,37 @@ all_possible_symptoms(Symptoms) :-
     list_to_set(Symptoms1, Symptoms),
     write(Symptoms).
 
+% intersection of lists
 intersect_lists([], []).
 intersect_lists([L|Ls], Intersection) :-
     foldl(intersection, Ls, L, Intersection).
 
-common_symptoms(Symptoms) :-
-    possible_diseases(Diseases),
-    findall(DiseaseSymptoms, (member(Disease, Diseases), findall(Symptom, symptom_of(Disease, Symptom), DiseaseSymptoms)), AllSymptoms),
-    intersect_lists(AllSymptoms,Symptoms).
-
-possible(Disease) :-
-    disease(Disease),
-    setof(Symptom, symptom_of(Disease, Symptom), Symptoms),
-    patient_symptoms(PatientSymptoms),
-    subset(PatientSymptoms,Symptoms).
-
-possible_diseases(Diseases) :-
-    setof(Disease, possible(Disease), Diseases).
-
+% not really used
 diagnose(Disease) :-
     possible(Disease),
     \+ ((possible(OtherDisease), OtherDisease \= Disease)), !.
 
+
+% adds a symptom to the list patient_symptoms
 add_patient_symptom(Symptom) :-
     patient_symptoms(Symptoms),
     append(Symptoms, [Symptom], NewSymptoms),
     retract(patient_symptoms(Symptoms)),
     assertz(patient_symptoms(NewSymptoms)).
 
+% condition for ending the interview, may add more conditions 
 interview_over() :-
     disease(Disease),
     aggregate_all(count, possible(Disease), Count),
     Count == 1, !.
 
+% asking the user for a particular Symptom
 ask(Symptom) :-
     format('do you have ~w? (y/n)~n', [Symptom]),
     read(Answer),
     Answer == y -> add_patient_symptom(Symptom).
 
+% the whole loop for the whole thing 
 interview() :-
     interview_over(),
     possible_symptoms(PossibleSymptoms),

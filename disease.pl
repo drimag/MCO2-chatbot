@@ -61,7 +61,7 @@ have(flu_like) :-
 % likely(dengue) :-
 %    have(flu_like),
 
-likely(acs) :-
+hi_sus(acs) :-
     have_symptom(chest_pain),
     have_symptom(heaviness),
     (risky(acs); risk(old)).
@@ -69,7 +69,7 @@ likely(acs) :-
 % likely(tuberculosis) :-
 %    have_symptom(long_time),
 
-likely(uti) :-
+hi_sus(uti) :-
     have_symptom(pain_urine);
     (at_least(3, [have_symptom(f_u_urine), have_symptom(inc_voiding), have_symptom(blood_urine), have_symptom(pain_uti), have_symptom(fever_chills)])).
 
@@ -78,7 +78,7 @@ likely(uti) :-
 
 % likely(asthma) :-
 
-likely(pneumonia) :-
+hi_sus(pneumonia) :-
     have(flu_like),
     have_symptom(crackels).
 
@@ -111,6 +111,11 @@ possible(Disease) :-
 % just puts the possible diseases into a list
 possible_diseases(Diseases) :-
     setof(Disease, possible(Disease), Diseases).
+
+
+likely_diseases(Diseases) :-
+    setof(Disease, likely(Disease), Diseases).
+
 
 % based on possible diseases, returns the common symptoms
 common_symptoms(Symptoms) :-
@@ -151,8 +156,8 @@ add_not_symptom(Symptom) :-
     retract(not_symptoms(NotSymptoms)),
     assertz(not_symptoms(NewSymptoms)).
 
-% condition for ending the interview, may add more conditions
-interview_not_over() :-
+% condition for ending the symptoms interview, may add more conditions
+si_not_over() :-
     aggregate_all(count, possible(Disease), Count),
     write(Count),
     Count > 1, !.
@@ -164,13 +169,58 @@ ask(Symptom) :-
     (   Answer == y -> add_patient_symptom(Symptom) ;
     Answer == n -> add_not_symptom(Symptom) ; true).
 
-% the whole loop for the whole thing
-interview() :-
-    interview_not_over(),
+disease_questions(Disease, Questions) :-
+    % Define a set of questions for each disease
+    (Disease == dengue ->
+        Questions = ['Do you have a cough?', 'Do you have chest pain?', 'Do you have a fever?']
+    ;Disease == acs ->
+        Questions = ['Have you had your blood pressure checked recently?', 'Have you experienced headaches or dizziness?']
+    ;Disease == acs ->
+        Questions = []
+    ;Disease == acs ->
+        Questions = []
+    ;Disease == acs ->
+        Questions = []
+    ;Disease == acs ->
+        Questions = []
+    ;Disease == acs ->
+        Questions = []
+    ;Disease == acs ->
+        Questions = []
+
+    ).
+
+% loop for asking for symptoms
+symptoms_interview() :-
+    si_not_over(),
     all_possible_symptoms(PossibleSymptoms),
     common_symptoms(CommonSymptoms),
     subtract(PossibleSymptoms, CommonSymptoms, SymptomsOI),
     write(SymptomsOI),
     nth0(0, SymptomsOI, SymptomOI),
     ask(SymptomOI),
-    interview().
+    symptoms_interview().
+
+% loop for asking for trisks (test/risks)
+trisks_interview() :-
+    possible(PossibleDisease),
+    scan(PossibleDisease),
+    trisks_interview().
+
+suggest(Diseases) :-
+    length(Diseases, Length),
+    (
+        Length == 0 ->
+        write("We are not able to diagnose you with any diseases based on your symptoms and risk factors")
+        ;
+        format("We are not able to diagnose you with any diseases based on your symptoms and risk factors, but we suggest that you get tested for ~s in an appropriate medical facility.", [Diseases])
+     ).
+
+interview() :-
+    symptoms_interview(),
+    trisks_interview(),
+    likely_diseases(LikelyDiseases),
+    (
+        ( possible(Disease), hi_sus(Disease) ) ->
+        diagnose(Disease); suggest(LikelyDiseases)
+    ).

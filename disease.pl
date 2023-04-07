@@ -28,7 +28,6 @@ mins_acgas([diarrhea]).
 mins_heatstroke([high_body_temp, disorientation]).
 
 
-
 symptom_of(dengue, Symptom) :-
     symptoms_dengue(Symptoms),
     member(Symptom,Symptoms).
@@ -95,6 +94,12 @@ symptom(Symptom) :-
     setof(Symp, Disease^(disease(Disease), symptom_of(Disease, Symp)), Symptoms),
     member(Symptom, Symptoms).
 
+symptoms(Symptoms) :-
+    setof(Symptom, symptom(Symptom), Symptoms).
+
+
+
+
 
 
 %
@@ -105,7 +110,7 @@ symptom(Symptom) :-
 
 hi_sus(dengue) :-
     mins_possible(dengue),
-    (   trisk(turniquet); trisk(close_contact)).
+    (trisk(turniquet); trisk(close_contact)).
 
 hi_sus(acs) :-
     have_symptom(chest_pain),
@@ -157,6 +162,11 @@ have_symptom(Symptom) :-
     patient_symptoms(Symptoms),
     symptom(Symptom),
     member(Symptom,Symptoms).
+
+not_have_symptom(Symptom) :-
+    not_symptoms(NotSymptoms),
+    symptom(Symptom),
+    member(Symptom, NotSymptoms).
 
 % based on patient symptoms, declares which diseases are still possible ()
 possible(Disease) :-
@@ -220,12 +230,26 @@ add_not_symptom(Symptom) :-
     retract(not_symptoms(NotSymptoms)),
     assertz(not_symptoms(NewSymptoms)).
 
+count_unasked_symptoms(AllSymptoms, PatientSymptoms, NotSymptoms, Count) :-
+    append(PatientSymptoms, NotSymptoms, AskedSymptoms),
+    subtract(AllSymptoms, AskedSymptoms, UnaskedSymptoms),
+    length(UnaskedSymptoms, Count).
+
 % condition for ending the symptoms interview, may add more conditions
-si_not_over() :-
-    disease(Disease),
-    aggregate_all(count, possible(Disease), Count),
-    write(Count),
-    Count > 1, !.
+pi_not_over() :-
+    possible_diseases(PossibleDiseases),
+    symptoms(AllSymptoms),
+    patient_symptoms(PatientSymptoms),
+    not_symptoms(NotSymptoms),
+    (
+        length(PossibleDiseases, Count),
+        Count > 1
+    ) ;
+    (
+        count_unasked_symptoms(AllSymptoms, PatientSymptoms, NotSymptoms, CountUA),
+        CountUA > 0
+    ).
+
 
 % asking the user for a particular Symptom
 ask(Symptom) :-
@@ -234,33 +258,21 @@ ask(Symptom) :-
     (   Answer == y -> add_patient_symptom(Symptom) ;
     Answer == n -> add_not_symptom(Symptom) ; true).
 
-disease_questions(Disease, Questions) :-
-    % Define a set of questions for each disease
-    (Disease == dengue ->
-        Questions = ['Do you have a cough?', 'Do you have chest pain?', 'Do you have a fever?']
-    ;Disease == acs ->
-        Questions = ['Have you had your blood pressure checked recently?', 'Have you experienced headaches or dizziness?']
-    ;Disease == acs ->
-        Questions = []
-    ;Disease == acs ->
-        Questions = []
-    ;Disease == acs ->
-        Questions = []
-    ;Disease == acs ->
-        Questions = []
-    ;Disease == acs ->
-        Questions = []
-    ;Disease == acs ->
-        Questions = []
+ask_list([]).
+ask_list([H|T]) :-
+    ask(H),
+    ask_list(T).
 
-    ).
-
-
-
+scan(Disease) :-
+     possible(Disease),
+     setof(Symptom, min_symptom_of(Disease, Symptom), MinSymptoms),
+     patient_symptoms(PatientSymptoms),
+     subtract(MinSymptoms, PatientSymptoms, AskSymptoms),
+     ask_list(AskSymptoms).
 
 % loop for asking for symptoms
-symptoms_interview() :-
-    si_not_over(),
+possible_interview() :-
+    pi_not_over(),
     all_possible_symptoms(PossibleSymptoms),
     common_symptoms(CommonSymptoms),
     subtract(PossibleSymptoms, CommonSymptoms, SymptomsOI),
@@ -273,6 +285,7 @@ symptoms_interview() :-
 trisks_interview() :-
     possible(PossibleDisease),
     scan(PossibleDisease),
+
     trisks_interview().
 
 suggest(Diseases) :-
@@ -285,7 +298,7 @@ suggest(Diseases) :-
      ).
 
 interview() :-
-    symptoms_interview(),
+    possible_interview(),
     trisks_interview(),
     possible_diseases(PossibleDiseases),
     (

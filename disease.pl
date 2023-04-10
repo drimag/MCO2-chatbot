@@ -1,7 +1,7 @@
 :- use_module(library(random)).
 
 % declaring the diseases and symptoms
-diseases([dengue, pneumonia, acs, tuberculosis, uti, hypertension, scabies, asthma]).
+diseases([dengue, pneumonia, acs, tuberculosis, uti, hypertension, scabies, asthma, acgas, heatstroke]).
 
 disease(Disease) :-
     diseases(Diseases),
@@ -9,7 +9,7 @@ disease(Disease) :-
 
 symptoms_dengue([cough, fever, m_j_pain, nausea_vomit, runny_nose, dengue_rash]).
 symptoms_pneumonia([cough, fever, m_j_pain, nausea_vomit, runny_nose, crackels, shortness_breath]).
-symptoms_acs([heaviness, chest_pain, doom, pain_l_s, acs_sweat, shortness_breath, headache, dizziness, high_bp]).
+symptoms_acs([heaviness, chest_pain, doom, pain_l_s, acs_sweat]).
 symptoms_tuberculosis([cough, cough_blood, night_sweats, fever, chest_pain, fatigue]).
 symptoms_uti([pain_urine, f_u_urine, inc_voiding, blood_urine, pain_uti, fever_chills]).
 symptoms_hypertension([headache, dizziness, shortness_breath, high_bp]).
@@ -99,20 +99,9 @@ symptom(Symptom) :-
 symptoms(Symptoms) :-
     setof(Symptom, symptom(Symptom), Symptoms).
 
-% trisks_dengue([turniquet, close_contact]).
-% trisks_acs([old, smoking, family_history, obesity, high_bp,
-% high_cholesterol]). trisks_tuberculosis([long_time]).
-% trisks_hypertension([monitor_bp]). trisks_scabies([close_contact]).
 
-% acs_trisk(X) :- trisks_acs(ACS_Trisks), member(X, ACS_Trisks).
-% trisks_acs([smoking, family_history, obesity, high_bp,
-% high_cholesterol]).
-% [smoking, family_history, obesity, high_bp, high_cholesterol]
-%
-% end of declaring diseases and symptoms
-%
 
-% definitions for when a disease is likely
+% definitions for when a disease is likely/ when the system will diagnose a disease
 
 hi_sus(dengue) :-
     mins_possible(dengue),
@@ -169,37 +158,42 @@ hi_sus(acgas) :-
 :- dynamic patient_symptoms/1.
 patient_symptoms([]).
 
+% symptoms the patient doesnt have
 :- dynamic not_symptoms/1.
 not_symptoms([]).
 
+% patient trisks
 :- dynamic patient_trisks/1.
 patient_trisks([]).
 
 
-% but says that if a symptom is in patient symptoms then the patient has
-% a given symptom
-%
+% a patient has Symptom if it is in list patient_symptoms
 have_symptom(Symptom) :-
     patient_symptoms(Symptoms),
     symptom(Symptom),
     member(Symptom,Symptoms).
 
+% a patient has a Trisk if it is in list patient_trisks
 have_trisk(Trisk) :-
     patient_trisks(Trisks),
     member(Trisk, Trisks).
 
+% a patient does not have a Symptom if it is in not_symptoms
 not_have_symptom(Symptom) :-
     not_symptoms(NotSymptoms),
     symptom(Symptom),
     member(Symptom, NotSymptoms).
 
+
 % based on patient symptoms, declares which diseases are still possible ()
+% a disease is still possible if the patient doesnt have any symptoms not of the symptoms of that disease
 possible(Disease) :-
     disease(Disease),
     setof(Symptom, symptom_of(Disease, Symptom), Symptoms),
     patient_symptoms(PatientSymptoms),
     subset(PatientSymptoms,Symptoms).
 
+% declares based on patient symptoms if a patient has the minimum symptoms for a disease to be diagnosed
 mins_possible(Disease) :-
     disease(Disease),
     setof(Symptom, min_symptom_of(Disease, Symptom), MinSymptoms),
@@ -210,8 +204,7 @@ mins_possible(Disease) :-
 possible_diseases(Diseases) :-
     setof(Disease, possible(Disease), Diseases).
 
-% list of diseases where the patient has that minimum symptoms for it to
-% be considered
+% puts the mins diseases in a list
 mins_diseases(Diseases) :-
     setof(Disease, mins_possible(Disease), Diseases).
 
@@ -268,15 +261,159 @@ at_least(N, [H|T]) :-
 
 % asking the user for a particular Symptom
 ask(Symptom) :-
-    format('do you have ~w? (y/n)~n', [Symptom]),
+    (
+        Symptom == cough ->
+        format('do you have a cough? (y/n)~n');
+
+        Symptom == fever ->
+        format('do you have a fever? (y/n)~n');
+
+        Symptom == m_j_pain ->
+        format('do you have muscle or joint pain? (y/n)~n');
+
+        Symptom == nausea_vomit ->
+        format('are you experiencing nausa, or do you feel like vomiting? (y/n)~n');
+
+        Symptom == runny_nose ->
+        format('do you have a runny nose? (y/n)~n');
+
+        Symptom == dengue_rash ->
+        format('with the help of a nurse, do you have the rash associated with dengue? (y/n)~n');
+
+        Symptom == crackels ->
+        format('with the help of a nurse, do you have crackels? (y/n)~n');
+
+        Symptom == shortness_breath ->
+        format('are you experiencing shortness of breath? (y/n)~n');
+
+        Symptom == heaviness ->
+        format('do you a feeling of heaviness? (y/n)~n');
+
+        Symptom == chest_pain ->
+        format('do you have chest pain? (y/n)~n');
+
+        Symptom == doom ->
+        format('do you have a feeling of impending doom? (y/n)~n');
+
+        Symptom == pain_l_s ->
+        format('are you experiencing pain or discomfort in the left arm, shoulder, jaw, or neck? (y/n)~n');
+
+        Symptom == acs_sweat ->
+        format('are you sweating more than normal? (y/n)~n');
+
+        Symptom == cough_blood ->
+        format('are you coughing blood? (y/n)~n');
+
+        Symptom == night_sweats ->
+        format('do you have night sweats? (y/n)~n');
+
+        Symptom == fatigue ->
+        format('are you experiencing fatigue? (y/n)~n');
+
+        Symptom == cough_blood ->
+        format('are you coughing blood? (y/n)~n');
+
+        Symptom == pain_urine ->
+        format('is it painful to urinate? (y/n)~n');
+
+        Symptom == f_u_urine ->
+        format('do you have frequent or urgent urination? (y/n)~n');
+
+        Symptom == inc_voiding ->
+        format('is there a sense of incomplete voiding? (y/n)~n');
+
+        Symptom == blood_urine ->
+        format('is there blood in your urine? (y/n)~n');
+
+        Symptom == fever_chills ->
+        format('do you have a fever and chills? (y/n)~n');
+
+        Symptom == dizziness ->
+        format('do you feel dizzy? (y/n)~n');
+
+        Symptom == rash_scabies ->
+        format('with the help of a nurse, do you have the rash associated with scabies? (y/n)~n');
+
+        Symptom == itches ->
+        format('do you have itches? (y/n)~n');
+
+        Symptom == burrows ->
+        format('with the help of a nurse, are there burrows in your skin? (y/n)~n');
+
+        Symptom == sores ->
+        format('are there sores on your skin? (y/n)~n');
+
+        Symptom == crusts ->
+        format('are there crusts on your skin? (y/n)~n');
+
+        Symptom == wheezing ->
+        format('with the help of a nurse, do you have wheezing? (y/n)~n');
+
+        Symptom == persistent_cough ->
+        format('do you have persistent cough? (y/n)~n');
+
+        Symptom == chest_tight ->
+        format('is there a tightness in your chest? (y/n)~n');
+
+        Symptom == diarrhea ->
+        format('do you have diarrhea? (y/n)~n');
+
+        Symptom == cramps ->
+        format('do you have cramps? (y/n)~n');
+
+        Symptom == dehydration ->
+        format('are you feeling dehydrated? (y/n)~n');
+
+        Symptom == high_body_temp ->
+        format('with the help of a nurse, do you have a high body temperature? (y/n)~n');
+
+        Symptom == disorientation ->
+        format('do you have a feeling of disorientation? (y/n)~n')
+
+    ),
+
     read(Answer),
+
     (   Answer == y -> add_patient_symptom(Symptom) ;
     Answer == n -> add_not_symptom(Symptom) ; true).
 
+
 ask_trisk(Trisk) :-
-    format('do you have ~w? (y/n)~n', [Trisk]),
+    (
+        Trisk == turniquet ->
+        format('with the help of a nurse, perform the turniquet test. does the tests suggest that you have dengue? (y/n)~n');
+
+        Trisk == close_contact ->
+        format('have you had close contact with others with similar symptoms? (y/n)~n');
+
+        Trisk == old ->
+        format('are you older than 45? (y/n)~n');
+
+        Trisk == long_time ->
+        format('have you been experiencing your symptoms for more than 2 weeks? (y/n)~n');
+
+        Trisk == monitor_bp ->
+        format('with the help of a nurse, have you had consistent high blood pressure? (y/n)~n');
+
+        Trisk == smoking ->
+        format('do you smoke? (y/n)~n');
+
+        Trisk == family_history ->
+        format('does your family have a history of heart problems? (y/n)~n');
+
+        Trisk == obesity ->
+        format('with the help of a nurse, are you considered obese? (y/n)~n');
+
+        Trisk == high_bp ->
+        format('with the help of a nurse, do you have high blood pressure? (y/n)~n');
+
+        Trisk == high_cholesterol ->
+        format('with the help of a nurse, do you have high cholesterol? (y/n)~n')
+    ),
+
     read(Answer),
     (Answer == y -> add_patient_trisk(Trisk) ; true).
+
 
 ask_trisks_acs([]).
 ask_trisks_acs([H|T]) :-
@@ -310,21 +447,7 @@ ask_trisks(Disease) :-
                    )
                ).
 
-ask_list([]).
-ask_list([H|T]) :-
-    ask(H),
-    ask_list(T).
 
-scan_mins(Disease) :-
-     possible(Disease),
-     setof(Symptom, min_symptom_of(Disease, Symptom), MinSymptoms),
-     patient_symptoms(PatientSymptoms),
-     subtract(MinSymptoms, PatientSymptoms, AskSymptoms),
-     ask_list(AskSymptoms).
-
-scan_trisks(Disease) :-
-    mins_possible(Disease),
-    ask_trisks(Disease).
 
 % condition for ending the symptoms interview, may add more conditions
 pi_not_over() :-
@@ -358,6 +481,22 @@ possible_interview() :-
     pi_not_over() -> possible_interview() ; true.
 
 
+ask_list([]).
+ask_list([H|T]) :-
+    ask(H),
+    ask_list(T).
+
+scan_mins(Disease) :-
+     possible(Disease),
+     setof(Symptom, min_symptom_of(Disease, Symptom), MinSymptoms),
+     patient_symptoms(PatientSymptoms),
+     subtract(MinSymptoms, PatientSymptoms, AskSymptoms),
+     ask_list(AskSymptoms).
+
+scan_trisks(Disease) :-
+    mins_possible(Disease),
+    ask_trisks(Disease).
+
 trisks_interview([]).
 trisks_interview([H|T]) :-
     scan_mins(H),
@@ -371,7 +510,7 @@ suggest(Diseases) :-
     length(Diseases, Length),
     (
         Length == 0 ->
-        write("We are not able to diagnose you with any diseases based on your symptoms and risk factors")
+        write("We are not able to diagnose you with any diseases based on your symptoms and risk factors, we suggest getting tested at an appropriate medical facility")
         ;
         format("We are not able to diagnose you with any diseases based on your symptoms and risk factors, but we suggest that you get tested for ~w in an appropriate medical facility.", [Diseases])
      ).
